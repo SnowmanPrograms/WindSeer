@@ -14,10 +14,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import StepLR
 
-import windseer.data as ws_data
-import windseer.nn.models as models
-import windseer.nn as nn_custom
-import windseer.utils as utils
+from . import models
+from . import losses as nn_custom
 
 should_exit = False
 sig_dict = dict((k, v) for v, k in reversed(sorted(signal.__dict__.items()))
@@ -34,6 +32,7 @@ def signal_handler(sig, frame):
 
 
 def train_model(configs, output_dir, use_writer, copy_datasets):
+    import windseer.data as ws_data
     '''
     Train a neural network according to the config settings
 

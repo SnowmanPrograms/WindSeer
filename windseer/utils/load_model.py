@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import windseer.utils as utils
+from .yaml_tools import WindseerParams
 import windseer.nn.models as models
 
 import os
@@ -31,10 +31,11 @@ def load_model(directory, version, dataset, device, eval=True):
     params : WindseerParams
         Model parameter dictionary
     '''
-    params = utils.WindseerParams(os.path.join(directory, 'params.yaml'))
+    params = WindseerParams(os.path.join(directory, 'params.yaml'))
 
     # get grid size of test dataset if potential flow is used
     if params.model_kwargs()['potential_flow']:
+        import windseer.data as nn_data
         grid_size = nn_data.get_grid_size(dataset)
         params.model_kwargs()['grid_size'] = grid_size
 

@@ -1,6 +1,6 @@
 import torch
 from torch.nn import Module
-import windseer.utils as utils
+from .. import utils as utils
 import sys
 import warnings
 import re

@@ -3,7 +3,7 @@ import torch
 
 from .interpolation import interpolate_sparse_data, get_smooth_data
 from .HDF5Dataset import HDF5Dataset
-import windseer.utils as utils
+from .. import utils
 
 
 def load_measurements(config, config_model):

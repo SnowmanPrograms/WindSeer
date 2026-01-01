@@ -6,10 +6,10 @@ import os
 from scipy.stats import pearsonr
 import torch
 
-import windseer.data as data
-import windseer.utils as utils
-import windseer.nn as nn
-import windseer.plotting as plotting
+from .. import data as data
+from .. import utils as utils
+from .. import nn as nn
+from .. import plotting as plotting
 
 
 def load_wind_data(config, detect_loiters=False):

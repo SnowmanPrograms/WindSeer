@@ -1,8 +1,8 @@
 from __future__ import print_function
 
-from windseer.data.interpolation import DataInterpolation, get_smooth_data
-import windseer.data.generate_turbulence as generate_turbulence
-import windseer.utils as windseer_utils
+from .interpolation import DataInterpolation, get_smooth_data
+from . import generate_turbulence as generate_turbulence
+from .. import utils as windseer_utils
 
 from enum import Enum
 import numpy as np

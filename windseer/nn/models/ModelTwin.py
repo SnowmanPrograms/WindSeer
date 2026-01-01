@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import sys
 
-import windseer.utils as utils
+from ... import utils as utils
 
 from .ModelBase import ModelBase
 

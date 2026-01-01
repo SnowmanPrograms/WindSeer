@@ -12,10 +12,6 @@ except ImportError:
     print('GPy could not get imported, GPR baseline not available')
     gpy_available = False
 
-import windseer.data as data
-import windseer.nn as nn
-import windseer.utils as utils
-
 
 def masts_to_string(input):
     out = ''
@@ -128,6 +124,7 @@ def predict_case(
     input_measurement = input_meas
     if 'input_smoothing' in config.data.keys():
         if config.data['input_smoothing']:
+            import windseer.data as data
             input_measurement = data.get_smooth_data(
                 input_meas, input_mask.bool(), config.model['model_args']['grid_size'],
                 config.data['input_smoothing_interpolation'],
@@ -226,6 +223,7 @@ def predict_case(
 
     else:
         with torch.no_grad():
+            import windseer.nn as nn
             prediction, _, _ = nn.get_prediction(
                 input.clone(), None, 1.0, device, net, config, scale_input=True
                 )

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import h5py
-import windseer.evaluation as eval
-import windseer.utils as utils
-import windseer.data as nn_data
+from .. import evaluation as eval
+from .. import utils as utils
+from .. import data as nn_data
 import windseer.plotting as plotting
 import numpy as np
 import time

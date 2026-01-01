@@ -2,7 +2,7 @@ import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import windseer.utils as utils
+from ... import utils as utils
 
 from .custom_modules import SparseConv
 from .ModelBase import ModelBase
