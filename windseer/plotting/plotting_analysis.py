@@ -16,9 +16,17 @@ try:
 except ImportError:
     mpl_imported = False
     pass
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import shutil
 
-plt.rc('font', **{'family': 'serif', 'sans-serif': ['Computer Modern Roman']})
-plt.rc('text', usetex=True)
+if shutil.which('latex'):
+    plt.rc('font', **{'family': 'serif', 'sans-serif': ['Computer Modern Roman']})
+    plt.rc('text', usetex=True)
+else:
+    plt.rc('font', **{'family': 'serif', 'sans-serif': ['DejaVu Sans']})
+    plt.rc('text', usetex=False)
 
 
 def vector_lims(uvw, axis=0):

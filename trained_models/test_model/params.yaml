@@ -139,7 +139,7 @@ model:
   model_type: ModelEDNN3D
   name_prefix: test_model
 run:
-  batchsize: 35
+  batchsize: 56
   compute_validation_loss: true
   compute_validation_loss_every_n_epochs: 10
   custom_init: false
@@ -148,7 +148,7 @@ run:
   learning_rate_decay_step_size: 750
   minibatch_epoch_loss: true
   n_epochs: 1000
-  num_workers: 6
+  num_workers: 8
   optimizer_kwargs:
     lr: 0.0001
   optimizer_type: adam

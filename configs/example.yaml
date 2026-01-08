@@ -2,8 +2,8 @@
 run:
     plot_every_n_batches: 5
     n_epochs: 1000
-    batchsize: 35
-    num_workers: 6
+    batchsize: 56
+    num_workers: 8
     learning_rate_decay: 0.25
     learning_rate_decay_step_size: 750
     compute_validation_loss: True

@@ -20,3 +20,4 @@ lsf.o*
 *.tiff
 *.sh
 *.egg-info*
+*model
