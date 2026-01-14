@@ -110,7 +110,7 @@ model:
     interpolation_mode: nearest
     logvar_scaling: 10
     n_downsample_layers: 4
-    n_epochs: 1000
+    n_epochs: 200
     n_first_conv_channels: 16
     n_stacked: 3
     n_x: 64
@@ -147,7 +147,7 @@ run:
   learning_rate_decay: 0.25
   learning_rate_decay_step_size: 750
   minibatch_epoch_loss: true
-  n_epochs: 1000
+  n_epochs: 200
   num_workers: 8
   optimizer_kwargs:
     lr: 0.0001
