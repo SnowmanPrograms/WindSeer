@@ -12,12 +12,12 @@ create_base_case()
     local f
     mkdir -p $1/system
     for f in ${system_files[@]}; do
-        ln -s $3 $2/system/$f $1/system/$f
+        ln -sf $3 $2/system/$f $1/system/$f
     done
 
     mkdir -p $1/constant
     for f in ${constant_files[@]}; do
-        ln -s $3 $2/constant/$f $1/constant/$f
+        ln -sf $3 $2/constant/$f $1/constant/$f
     done
 }
 

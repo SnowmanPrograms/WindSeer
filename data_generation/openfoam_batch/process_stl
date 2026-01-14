@@ -21,7 +21,7 @@ usage() {
     exit 0;
 }
 
-while getopts "o:r:z:h" opt; do
+while getopts "o:r:z:n:h" opt; do
     case "$opt" in
         o)  OUTDIR=$OPTARG ;;
         r)  rotation=$OPTARG ;;

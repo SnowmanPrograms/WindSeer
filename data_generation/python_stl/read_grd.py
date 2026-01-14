@@ -47,7 +47,7 @@ def create_trimesh(x, y, z, subsample=1, verbose=True):
         for j in range(3):
             terrian_mesh.vectors[i][j] = vertices[f[j], :]
     if verbose:
-        print "Created mesh with {0} vertices, {1} triangles.".format(vertices.shape[0], triangles.shape[0])
+        print("Created mesh with {0} vertices, {1} triangles.".format(vertices.shape[0], triangles.shape[0]))
     return terrian_mesh
 
 
@@ -65,8 +65,8 @@ def create_blockMeshDict(outfile, xyz_lims, nx=10, ny=10, nz=10, infile = './blo
                 'MCONVERT': '{0:0.2f}'.format(mconvert), 'GX': gx, 'GY': gy, 'GZ': gz}
 
     if not quiet:
-        print "Creating outfile {0} from {1}".format(outfile, infile)
-        print "Mesh limits: x in [{0}, {1}], y in [{2}, {3}], z in [{4}, {5}]".format(lx, hx, ly, hy, lz, hz)
+        print("Creating outfile {0} from {1}".format(outfile, infile))
+        print("Mesh limits: x in [{0}, {1}], y in [{2}, {3}], z in [{4}, {5}]".format(lx, hx, ly, hy, lz, hz))
 
     with open(infile, "r") as fh:
         src = Template(fh.read())
