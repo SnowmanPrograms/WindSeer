@@ -139,13 +139,17 @@ for stl_dir in "$@"; do
                 cat blockMesh.err
                 continue
             fi
-            snappyHexMesh -overwrite > snappyHexMesh.log 2> snappyHexMesh.err
+            cp $base_case/simpleFoam/system/decomposeParDict.ptscotch system/decomposeParDict
+            decomposePar > decomposePar.log 2>&1
+            mpirun -np 16 snappyHexMesh -parallel -overwrite > snappyHexMesh.log 2> snappyHexMesh.err
             if [ $? -ne 0 ]
             then
                 echo " snappyHexMesh failed. Skipping ${casename}. Error report:"
                 cat snappyHexMesh.err
                 continue
             else
+                reconstructPar -constant -noFields > reconstructPar.log 2>&1
+                rm -rf processor*
                 echo " done. Final mesh properties:"
                 cat snappyHexMesh.log | tail -14
             fi
