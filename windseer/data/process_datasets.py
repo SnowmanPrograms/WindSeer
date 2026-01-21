@@ -238,7 +238,7 @@ def convert_dataset(
 
                 else:
                     # create group in hdf5 file for the current sample
-                    sample = member.name.replace('.csv', '')
+                    sample = os.path.basename(member.name).replace('.csv', '')
                     output_file.create_group(sample)
 
                     channel_shape = [nz, nx]
@@ -404,7 +404,7 @@ def convert_dataset(
 
                     # add the zero sample if new terrain and creating zero samples is enabled
                     if create_zero_samples and new_terrain:
-                        zero_sample = sample.replace('_W01_', '_W00_')
+                        zero_sample = os.path.basename(sample).replace('_W01_', '_W00_')
 
                         # add zero sample to hdf5 file
                         output_file.create_group(zero_sample)

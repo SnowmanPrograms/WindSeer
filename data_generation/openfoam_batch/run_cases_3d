@@ -132,7 +132,7 @@ for stl_dir in "$@"; do
             # Build mesh
             echo -ne "\tBuilding mesh..."
             cd $simpleFoam_dir
-            blockMesh > blockMesh.log 2> blockMesh.err
+            env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" blockMesh > blockMesh.log 2> blockMesh.err
             if [ $? -ne 0 ]
             then
                 echo " blockMesh failed. Skipping ${casename}. Error report:"
@@ -140,15 +140,15 @@ for stl_dir in "$@"; do
                 continue
             fi
             cp $base_case/simpleFoam/system/decomposeParDict.ptscotch system/decomposeParDict
-            decomposePar > decomposePar.log 2>&1
-            mpirun -np 16 snappyHexMesh -parallel -overwrite > snappyHexMesh.log 2> snappyHexMesh.err
+            env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" decomposePar > decomposePar.log 2>&1
+            env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" mpirun -np 16 snappyHexMesh -parallel -overwrite > snappyHexMesh.log 2> snappyHexMesh.err
             if [ $? -ne 0 ]
             then
                 echo " snappyHexMesh failed. Skipping ${casename}. Error report:"
                 cat snappyHexMesh.err
                 continue
             else
-                reconstructPar -constant -noFields > reconstructPar.log 2>&1
+                env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" reconstructPar -constant -noFields > reconstructPar.log 2>&1
                 rm -rf processor*
                 echo " done. Final mesh properties:"
                 cat snappyHexMesh.log | tail -14
@@ -157,7 +157,7 @@ for stl_dir in "$@"; do
             echo -en "\tBuilding resampled (regular) mesh for final output..."
             cd $reGrid_dir
             ./Allclean
-            blockMesh > blockMesh.log 2> blockMesh.err
+            env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" blockMesh > blockMesh.log 2> blockMesh.err
             if [ $? -ne 0 ]
             then
                 echo " failed. Error report:"
@@ -212,15 +212,15 @@ for stl_dir in "$@"; do
     echo -en "\tCase setup complete: W=$w, running simpleFoam (Parallel 16 cores)..."
     # --- Parallel Execution ---
     cp system/decomposeParDict.ptscotch system/decomposeParDict
-    decomposePar > decomposePar.log 2>&1
-    mpirun -np 16 simpleFoam -parallel > simpleFoam.log 2> simpleFoam.err
+    env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" decomposePar > decomposePar.log 2>&1
+    env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" mpirun -np 16 simpleFoam -parallel > simpleFoam.log 2> simpleFoam.err
     if [ "$?" -gt 0 ]; then
         echo " failed!"
         continue
     fi
-    reconstructPar -latestTime > reconstructPar.log 2>&1
+    env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" reconstructPar -latestTime > reconstructPar.log 2>&1
     # --------------------------
-    first_iterations=$( foamListTimes -latestTime ) 
+    first_iterations=$( env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamListTimes -latestTime ) 
     first_converged=$( check_converged )
     if [ "$first_converged" -eq 0 ]; then
         echo " did not converge in max iterations."
@@ -234,12 +234,12 @@ for stl_dir in "$@"; do
         # We will remove the first order solution if the second is successful
         echo -en "\tRunning second solver simpleFoam..."
         create_base_case $wind_directory $base_case/$second_solver -fn
-        simpleFoam > simpleFoam2.log 2> simpleFoam2.err
+        env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" simpleFoam > simpleFoam2.log 2> simpleFoam2.err
         if [ "$?" -gt 0 ]; then
             echo " failed!"
 	    continue
         else
-            second_iterations=$(  foamListTimes -latestTime ) 
+            second_iterations=$(  env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamListTimes -latestTime ) 
             second_converged=$( check_converged )
             if [ "$second_converged" -eq 0 ]; then
                 echo " did not converge in max iterations."
@@ -260,6 +260,6 @@ for stl_dir in "$@"; do
     ./reuse_wind_case -c "${case_dir}/W1" -v 1 -o "$case_dir" $wlist
     echo "\tReuse wind case returned: $? failures"
     if [ "$regrid" -gt 0 ]; then
-        make_csvs.sh -c "$csv_dir" -p "$python_directory" -w "$wind_delta" "$case_dir"
+        ./make_csvs.sh -c "$csv_dir" -p "$python_directory" -w "$wind_delta" "$case_dir"
     fi
 done

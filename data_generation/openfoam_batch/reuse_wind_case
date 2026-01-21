@@ -57,19 +57,20 @@ fi
 # Get current U, p, k, epsilon, nut
 # First, convert case to ascii (sed -i command replaces symlink with file)
 cd $original_case
-latest_time=$( foamListTimes -latestTime )
-sed -i '' system/controlDict
-# existing_format=$( foamDictionary -entry 'writeFormat' -value system/controlDict)
-existing_format=$( foamDictionary -entry 'FoamFile.format' -value "${latest_time}/U" )
+latest_time=$( env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamListTimes -latestTime )
+sed -i 's/$/ /;s/ $//' system/controlDict
+# existing_format=$( env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamDictionary -entry 'writeFormat' -value system/controlDict)
+# Use grep to check format instead of foamDictionary to avoid crash on binary files
+existing_format=$(grep "format" "${latest_time}/U" | awk '{print $2}' | tr -d ';')
 if [ "$existing_format" != "ascii" ]; then
-    foamDictionary -entry 'writeFormat' -set "ascii" system/controlDict
-    foamFormatConvert -latestTime -noConstant
+    env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamDictionary -entry 'writeFormat' -set "ascii" system/controlDict
+    env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamFormatConvert -latestTime -noConstant
 fi
-foamDictionary -entry 'writeFormat' -set "binary" system/controlDict
+env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamDictionary -entry 'writeFormat' -set "binary" system/controlDict
 
 declare -a set_fields=("U" "p" "k" "epsilon" "nut")
 for field in "${set_fields[@]}"; do
-    foamDictionary -entry 'internalField' -value "${latest_time}/${field}" > "${original_case}/temp${field}.txt"
+    env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamDictionary -entry 'internalField' -value "${latest_time}/${field}" > "${original_case}/temp${field}.txt"
 done
 
 for wind_speed in "$@"; do
@@ -83,33 +84,26 @@ for wind_speed in "$@"; do
     ratio_cu=$( echo "${ratio_sq}*$ratio" | bc )
     
     # Create case directory
-    create_base_case $wind_directory $base_case
+    # Remove existing directory
+    rm -rf $wind_directory
+    cp -r $base_case $wind_directory
     
     cd $wind_directory
-    if [ -d "../W${original_speed}/constant/polyMesh" ]; then
-        ln -s "../../W${original_speed}/constant/polyMesh" constant/polyMesh
-    else
-        ln -s ${base_case}/constant/polyMesh constant/polyMesh
-    fi
-    # Set to ascii write (first have to make file real, not symlink)
-    sed -i ';' system/controlDict
-    foamDictionary -entry 'writeFormat' -set "ascii" system/controlDict
+    # Ensure it is a real directory and we can write to it
+    # Set to ascii write
+    sed -i 's/$/ /;s/ $//' system/controlDict
+    env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamDictionary -entry 'writeFormat' -set "ascii" system/controlDict
     
-    # Create new 0 from old one
-    mapFields -consistent -sourceTime 0 $original_case
-    
-    # Update speeds
-    declare -a set_fields=("U" "epsilon" "k")
-    for field in "${set_fields[@]}"; do
-        foamDictionary -entry 'boundaryField.west_face.Uref' -set "$wind_speed" "0/$field"
-    done
+    # Update speeds in ABLConditions
+    sed -i "s/Uref\s\+[0-9.]\+;/Uref\t\t$wind_speed;/g" 0/include/ABLConditions
     
     cd "$wind_directory/0"
     
+    # Update internalFields using temp files from original case
     # U is special (vector)    
-    awk '/\(.*\)/ {gsub(/[()]/,""); print "("$1*'"$ratio"', $2*'"$ratio"', $3*'"$ratio"'")"; next} 1' "${original_case}/tempU.txt" > Umod.txt
-    foamDictionary -entry 'internalField' -set '#include "Umod.txt"' "U" > /dev/null
-    rm Umod.txt
+    awk '/\(.*")/ {gsub(/[()]/,""); print "("$1*\'"$ratio"'", $2*\'"$ratio"'", $3*\'"$ratio"'")"; next} 1' "${original_case}/tempU.txt" > Umod.txt
+    env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamDictionary -entry 'internalField' -set '#include "Umod.txt"' "U" > /dev/null
+    # rm Umod.txt
 
     # Set other fields 
     declare -a set_fields=("p" "k" "epsilon" "nut")
@@ -118,23 +112,23 @@ for wind_speed in "$@"; do
             nut) mult="$ratio" ;;
             k|p) mult="$ratio_sq" ;;
             epsilon) mult="$ratio_cu" ;;
-            *) echo "Multiplier not found for ${field}!" >&2; exit 1 ;;
+            *) echo "Multiplier not found for ${field}!" >&2; exit 1 ;; 
         esac
 
         ffile="${field}mod.txt"
-        awk 'NR<=3 {print; next}; /^[^\)]/  { print $1*'"$mult"'; next; }; 1' "${original_case}/temp${field}.txt" > "$ffile"
-        foamDictionary -entry 'internalField' -set "#include \"${ffile}\"" "$field" > /dev/null
-        rm "$ffile"
+        awk 'NR<=3 {print; next}; /^[^")]/  { print $1*\'"$mult"'\; next; }; 1' "${original_case}/temp${field}.txt" > "$ffile"
+        env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamDictionary -entry 'internalField' -set "#include \"${ffile}\"" "$field" > /dev/null
+        # rm "$ffile"
     done
     
     cd "$wind_directory"
     echo -en "\tRunning simpleFoam for reuse case..."
-    simpleFoam > simpleFoam.log 2> simpleFoam.err
+    env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" simpleFoam > simpleFoam.log 2> simpleFoam.err
     simple_success="$?"
     if [ "$simple_success" -gt 0 ]; then
         echo " failed!"
     else
-        simple_iter=$(  foamListTimes -latestTime )
+        simple_iter=$(  env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamListTimes -latestTime )
         echo " converged in ${simple_iter} iterations."
     fi
     return_val=$( echo "${simple_success} + ${return_val}" | bc )

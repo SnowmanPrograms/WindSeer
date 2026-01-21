@@ -2,3 +2,5 @@ csv
 cases
 cases3d
 fig
+fast_processed/
+processed_stls/

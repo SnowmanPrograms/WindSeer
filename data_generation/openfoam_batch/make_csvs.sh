@@ -109,13 +109,7 @@ for dir in $@; do
 
         [ "$verbose" -ne 0 ] &&
             echo "  Creating csv for t=$latest_time to $csv_file..."
-        python "${python_dir}/resample.py" --three-d --case-dir $wind_directory \
-            --mesh-dir $reGrid_dir --case-foam hill.foam --outfile $csv_file --time $latest_time
-        if [ "$?" -gt 0 ]; then
-            [ "$verbose" -ne 0 ] && echo " failed!"
-        else
-            [ "$verbose" -ne 0 ] && echo " done."
-        fi
+        env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" pvpython "${python_dir}/resample.py" --three-d --case-dir $wind_directory \
+            --mesh-dir $reGrid_dir --case-foam hill.foam --o "$csv_file"
     done
-    cd "$home_dir"
 done

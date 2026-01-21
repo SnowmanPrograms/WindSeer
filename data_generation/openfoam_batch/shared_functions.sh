@@ -52,9 +52,9 @@ check_path() {
 
 check_converged() {
     local latest_write write_interval end_time last_write
-    latest_write=$( foamListTimes -latestTime )
-    write_interval=$( foamDictionary -entry 'writeInterval' -value system/controlDict )
-    end_time=$( foamDictionary -entry 'endTime' -value system/controlDict )
+    latest_write=$( env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamListTimes -latestTime )
+    write_interval=$( env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamDictionary -entry 'writeInterval' -value system/controlDict )
+    end_time=$( env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamDictionary -entry 'endTime' -value system/controlDict )
     last_write=$( echo "$end_time/$write_interval*$write_interval" | bc )
     if [[ -z "$latest_write" ]] || [[ "$latest_write" -eq "$last_write" ]]; then
         echo "0"

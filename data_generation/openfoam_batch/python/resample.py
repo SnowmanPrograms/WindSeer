@@ -49,7 +49,7 @@ for t in inputfoam.TimestepValues:
     para.SetActiveSource(inputfoam)
 
     # create a new 'Resample With Dataset'
-    resampleWithDataset1 = para.ResampleWithDataset(Input=inputfoam, Source=testgridfoam)
+    resampleWithDataset1 = para.ResampleWithDataset(SourceDataArrays=inputfoam, DestinationMesh=testgridfoam)
 
     # Properties modified on resampleWithDataset1
     resampleWithDataset1.Tolerance = 2.22044604925031e-16
