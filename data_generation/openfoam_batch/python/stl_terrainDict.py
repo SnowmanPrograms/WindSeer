@@ -28,10 +28,27 @@ def create_terrainDict(outfile, xyz_lims, stl_file, nx=10, ny=10, nz=10, infile=
     lx, hx = xyz_lims[0]+ [in_buffer*dx, -in_buffer*dx]
     ly, hy = xyz_lims[1]+ [in_buffer*dy, -in_buffer*dy]
     lz, hz = xyz_lims[2]    # + [0.001*dz, 0.0]
+
+    # Target resolution based on training data
+    # dx_target = 16.6444, dz_target = 11.5789
+    # We use N-1 because OpenFOAM blocks define cells between N vertices, 
+    # but for WindSeer we want N cells in the output.
+    snx = int(round(dx / 16.6444))
+    sny = int(round(dy / 16.6444))
+    snz = int(round(dz / 11.5789))
+
+    # Ensure we don't go below the model's minimum expected resolution (usually 64)
+    # and adjust for OpenFOAM blockMesh vertex vs cell count if necessary.
+    # The original was 127 for 128 cells.
+    snx = max(snx, 64) - 1
+    sny = max(sny, 64) - 1
+    snz = max(snz, 64) - 1
+
     sub_dict = {'MINX': '{0:0.4f}'.format(lx), 'MAXX': '{0:0.4f}'.format(hx),
                 'MINY': '{0:0.4f}'.format(ly), 'MAXY': '{0:0.4f}'.format(hy),
                 'MINZ': '{0:0.4f}'.format(lz), 'MAXZ': '{0:0.4f}'.format(hz),
                 'NX': '{0:d}'.format(nx), 'NY': '{0:d}'.format(ny), 'NZ': '{0:d}'.format(nz),
+                'SNX': '{0:d}'.format(snx), 'SNY': '{0:d}'.format(sny), 'SNZ': '{0:d}'.format(snz),
                 'MCONVERT': '{0:0.2f}'.format(mconvert), 'GX': gx, 'GY': gy, 'GZ': gz,
                 'STL_FILE': '"{0}"'.format(os.path.basename(stl_file))}
 

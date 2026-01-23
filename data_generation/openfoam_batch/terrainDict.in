@@ -1,9 +1,9 @@
 /*--------------------------------*- C++ -*----------------------------------*\
-| =========                 |                                                 |
-| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \    /   O peration     | Version:  5                                     |
-|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \/     M anipulation  |                                                 |
+| =========                 |                                                 |\
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |\
+|  \    /   O peration     | Version:  5                                     |\
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |\
+|    \/     M anipulation  |                                                 |\
 \*---------------------------------------------------------------------------*/
 
 STL_FILE $STL_FILE;
@@ -26,7 +26,7 @@ GRADE
 
 SUBGRADE
 {
-    X { N 127; S 1; }
-    Y { N 127; S 1; }
-    Z { N  63; S 1; }
+    X { N $SNX; S 1; }
+    Y { N $SNY; S 1; }
+    Z { N $SNZ; S 1; }
 }
