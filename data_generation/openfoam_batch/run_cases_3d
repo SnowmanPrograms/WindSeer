@@ -14,7 +14,7 @@ build_mesh=1
 output_dir="cases3d/"
 # Source shared functions ( 'create_base_case' and 'check_files' )
 source shared_functions.sh
-usage() { 
+usage() {
     echo -e "Usage: $0 [OPTION] stl_dir1 stl_dir2 ..."
     # echo -e "  -s stl_dir\n\tDirectory of stl files"
     echo -e "  -c csv_dir\n\tDirectory to output csv files"
@@ -69,8 +69,8 @@ then
     exit 1
 fi
 openfoam_build=$(simpleFoam -help | sed -n -e '/Build:\s/{s/.*://p}')
-openfoam_major_version=$(echo $openfoam_build | head -c 1) 
-echo "OpenFOAM version $openfoam_major_version found, build $openfoam_build"
+openfoam_major_version=$(echo $openfoam_build | head -c 1)
+ echo "OpenFOAM version $openfoam_major_version found, build $openfoam_build"
 case "$openfoam_major_version" in
     4) stl_geometry='geometry\n{\n\t$:TERRAIN_DICT.STL_FILE\n\t{\n\t\ttype triSurfaceMesh;\n\t\tname hill_geometry;\n\t}\n};'
         ;;
@@ -171,11 +171,11 @@ for stl_dir in "$@"; do
         cd $case_dir
         # Read atmospheric variables to calculate k, eps
         abl_file="${base_case}/simpleFoam/0.orig/include/ABLConditions"
-        abl_kappa=$( sed -n 's/^ *kappa *\([\.,0-9]*\).*/\1/p' $abl_file )
-        abl_Cmu=$( sed -n 's/^ *Cmu *\([\.,0-9]*\).*/\1/p' $abl_file )
-        abl_Zref=$( sed -n 's/^ *Zref *\([\.,0-9]*\).*/\1/p' $abl_file )
-        abl_z0=$( sed -n 's/^ *z0[^0-9]*\([\.,0-9]*\).*/\1/p' $abl_file )
-        abl_zGround=$( sed -n 's/^ *zGround[^0-9]*\([\.,0-9]*\).*/\1/p' $abl_file )
+        abl_kappa=$( sed -n 's/^ *kappa *\([.,0-9]*\).*/\1/p' $abl_file )
+        abl_Cmu=$( sed -n 's/^ *Cmu *\([.,0-9]*\).*/\1/p' $abl_file )
+        abl_Zref=$( sed -n 's/^ *Zref *\([.,0-9]*\).*/\1/p' $abl_file )
+        abl_z0=$( sed -n 's/^ *z0[^0-9]*\([.,0-9]*\).*/\1/p' $abl_file )
+        abl_zGround=$( sed -n 's/^ *zGround[^0-9]*\([.,0-9]*\).*/\1/p' $abl_file )
         abl_params="-z 5.0 --Z-ref $abl_Zref -z0 $abl_z0 -zg $abl_zGround "
         if [ -n "$abl_kappa" ]; then
             abl_params="$abl_params -k $abl_kappa"
@@ -220,7 +220,7 @@ for stl_dir in "$@"; do
     fi
     env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" reconstructPar -latestTime > reconstructPar.log 2>&1
     # --------------------------
-    first_iterations=$( env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamListTimes -latestTime ) 
+    first_iterations=$( env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamListTimes -latestTime )
     first_converged=$( check_converged )
     if [ "$first_converged" -eq 0 ]; then
         echo " did not converge in max iterations."
@@ -239,7 +239,7 @@ for stl_dir in "$@"; do
             echo " failed!"
 	    continue
         else
-            second_iterations=$(  env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamListTimes -latestTime ) 
+            second_iterations=$(  env LD_LIBRARY_PATH="$OLD_LD_LIBRARY_PATH" foamListTimes -latestTime )
             second_converged=$( check_converged )
             if [ "$second_converged" -eq 0 ]; then
                 echo " did not converge in max iterations."
@@ -258,8 +258,9 @@ for stl_dir in "$@"; do
         wlist="${wlist} ${w}"
     done
     ./reuse_wind_case -c "${case_dir}/W1" -v 1 -o "$case_dir" $wlist
-    echo "\tReuse wind case returned: $? failures"
+    echo -e "\tReuse wind case returned: $? failures"
     if [ "$regrid" -gt 0 ]; then
-        ./make_csvs.sh -c "$csv_dir" -p "$python_directory" -w "$wind_delta" "$case_dir"
+        ./make_csvs.sh -c "$csv_dir" -p "$python_directory" -w "$wind_delta" "$case_dir" &
     fi
 done
+wait

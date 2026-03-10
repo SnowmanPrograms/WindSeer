@@ -23,6 +23,16 @@ def main():
                         help='Visualization mode: slice (interactive), quiver (vector field), streamlines')
     parser.add_argument('-c', '--channels', nargs='+', default=['ux', 'uy', 'uz'], 
                         help='Channels to visualize (default: ux uy uz)')
+    parser.add_argument('--quiver-mask-points', type=int, default=600,
+                        help='Render every Nth vector in quiver mode (larger = sparser, default: 20)')
+    parser.add_argument('--quiver-scale-factor', type=float, default=4.0,
+                        help='Arrow size multiplier in quiver mode (default: 4.0)')
+    parser.add_argument('--quiver-opacity', type=float, default=1.0,
+                        help='Arrow opacity in quiver mode from 0 to 1 (default: 1.0)')
+    parser.add_argument('--quiver-line-width', type=float, default=2.0,
+                        help='Arrow outline width in quiver mode (default: 2.0)')
+    parser.add_argument('--quiver-scale-mode', choices=['vector', 'scalar', 'none'], default='none',
+                        help='Arrow scaling strategy in quiver mode (default: none)')
     parser.add_argument('--list', action='store_true', help='List all sample names in the file and exit')
 
     args = parser.parse_args()
@@ -117,6 +127,11 @@ def main():
                         prediction=data[:3],
                         terrain=terrain,
                         prediction_channels=available_channels[:3],
+                        quiver_mask_points=args.quiver_mask_points,
+                        quiver_scale_factor=args.quiver_scale_factor,
+                        quiver_opacity=args.quiver_opacity,
+                        quiver_line_width=args.quiver_line_width,
+                        quiver_scale_mode=args.quiver_scale_mode,
                         blocking=True
                     )
                 else:

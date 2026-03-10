@@ -234,6 +234,8 @@ class PlotUtils():
             self._plot_error = True
             plot_prediction_error = False
 
+        self._plot_error_norm = self._plot_error
+
         self._plot_uncertainty = False
         if uncertainty is not None:
             assert len(
@@ -447,6 +449,9 @@ class PlotUtils():
                 math.ceil(len(self._provided_prediction_channels) / 4.0)
                 )
 
+        if self._plot_error_norm:
+            self._n_figures += 1
+
         for j in range(self._n_figures):
             self._ax_sliders += [None]
             self._sliders += [None]
@@ -543,6 +548,8 @@ class PlotUtils():
                 self._error = self._label - self._prediction
             else:
                 self._error = self._measurements - self._prediction
+
+            self._error_norm = np.linalg.norm(self._error, axis=0)
 
         if self._plot_uncertainty:
             self._uncertainty = uncertainty
@@ -1004,6 +1011,66 @@ class PlotUtils():
                 for circle in self._buttons[fig_idx].circles:
                     circle.set_radius(0.1)
                 self._buttons[fig_idx].on_clicked(self.radio_callback)
+
+        if self._plot_error_norm:
+            fig_in, ah_in = plt.subplots(1, 1, squeeze=False, figsize=(8, 8))
+            fig_in.patch.set_facecolor('white')
+            fig_idx += 1
+            slice = self._n_slices[fig_idx]
+
+            im = {}
+            im['image'] = ah_in[0][0].imshow(
+                self._error_norm[:, slice, :],
+                origin='lower',
+                vmin=0.0,
+                vmax=np.nanmax(self._error_norm),
+                aspect='equal',
+                cmap=self._cmap
+                )
+
+            chbar = fig_in.colorbar(im['image'], ax=ah_in[0][0])
+            plt.setp(chbar.ax.get_yticklabels(), fontsize=self._tick_fontsize)
+
+            im['data'] = self._error_norm
+            self._images.append(im)
+
+            if self._terrain_mask is not None:
+                im = {}
+                im['image'] = ah_in[0][0].imshow(
+                    self._terrain_mask[:, slice, :],
+                    cmap=self._cmap_terrain,
+                    aspect='equal',
+                    origin='lower'
+                    )
+                im['data'] = self._terrain_mask
+                self._images.append(im)
+
+            ah_in[0][0].set_title(
+                'Prediction Error Norm [m/s]', fontsize=self._title_fontsize
+                )
+            ah_in[0][0].set_xticks([])
+            ah_in[0][0].set_yticks([])
+
+            plt.tight_layout()
+            plt.subplots_adjust(bottom=0.12)
+
+            self._ax_sliders[fig_idx] = plt.axes(self._slider_location)
+            self._sliders[fig_idx] = Slider(
+                self._ax_sliders[fig_idx],
+                'Slice',
+                0,
+                self._domain_shape[1] - 1,
+                valinit=slice,
+                valfmt='%0.0f'
+                )
+            self._sliders[fig_idx].on_changed(self.slider_callback)
+
+            rax = plt.axes(self._button_location)
+            label = ('  x-z', '  x-y', '  y-z')
+            self._buttons[fig_idx] = RadioButtons(rax, label, active=0)
+            for circle in self._buttons[fig_idx].circles:
+                circle.set_radius(0.1)
+            self._buttons[fig_idx].on_clicked(self.radio_callback)
 
         if self.blocking:
             plt.show()

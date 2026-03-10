@@ -16,6 +16,70 @@ except ImportError:
 import numpy as np
 
 
+def _normalize_quiver_scale_mode(scale_mode):
+    mapping = {
+        'none': 'data_scaling_off',
+        'off': 'data_scaling_off',
+        'scalar': 'scale_by_scalar',
+        'vector': 'scale_by_vector',
+        'vector_components': 'scale_by_vector_components',
+    }
+
+    return mapping.get(scale_mode, scale_mode)
+
+
+def _configure_figure_rendering(fig, anti_aliasing_frames=8, multi_samples=8):
+    scene = getattr(fig, 'scene', None)
+    if scene is None:
+        return
+
+    try:
+        if hasattr(scene, 'anti_aliasing_frames'):
+            scene.anti_aliasing_frames = anti_aliasing_frames
+    except Exception:
+        pass
+
+    render_window = getattr(scene, 'render_window', None)
+    if render_window is None:
+        return
+
+    for attr, value in (
+            ('multi_samples', multi_samples),
+            ('line_smoothing', True),
+            ('point_smoothing', True),
+            ('polygon_smoothing', True),
+        ):
+        try:
+            if hasattr(render_window, attr):
+                setattr(render_window, attr, value)
+        except Exception:
+            pass
+
+
+def _configure_arrow_glyph(plot, shaft_resolution=24, tip_resolution=24):
+    try:
+        glyph_source = plot.glyph.glyph_source.glyph_source
+    except Exception:
+        return
+
+    for attr, value in (
+            ('shaft_resolution', shaft_resolution),
+            ('tip_resolution', tip_resolution),
+        ):
+        try:
+            if hasattr(glyph_source, attr):
+                setattr(glyph_source, attr, value)
+        except Exception:
+            pass
+
+
+def _set_actor_opacity(plot, opacity):
+    try:
+        plot.actor.property.opacity = opacity
+    except Exception:
+        pass
+
+
 def mlab_plot_terrain(terrain, mode='blocks', uniform_color=False, figure=None):
     '''
     Plot the terrain into the current or a new figure
@@ -271,10 +335,11 @@ def mlab_plot_trajectories(
     '''
     if mayavi_available:
         if white_background:
-            fig = mlab.figure(fgcolor=(0., 0., 0.), bgcolor=(1, 1, 1))
+            fig = mlab.figure(fgcolor=(0., 0., 0.), bgcolor=(1, 1, 1), size=(1400, 1000))
         else:
-            fig = mlab.figure()
+            fig = mlab.figure(size=(1400, 1000))
 
+        _configure_figure_rendering(fig)
         mlab_plot_terrain(terrain, terrain_mode, terrain_uniform_color)
 
         for traj in trajectories:
@@ -387,7 +452,12 @@ def mlab_plot_prediction(
         prediction_channels=None,
         blocking=True,
         white_background=True,
-        quiver_mask_points=100,
+        quiver_mask_points=20,
+        quiver_scale_factor=4.0,
+        quiver_opacity=1.0,
+        quiver_line_width=2.0,
+        quiver_mode='arrow',
+        quiver_scale_mode='none',
         view_settings=None,
         animate=False,
         save_animation=False
@@ -411,8 +481,18 @@ def mlab_plot_prediction(
         Indicates if the blocking mlab.show() function should be called
     white_background : bool, default : True
         Use a white instead of the default grey background
-    quiver_mask_points : int, default : 100
+    quiver_mask_points : int, default : 20
         Plot every Nth cell in the quiver plot
+    quiver_scale_factor : float, default : 4.0
+        Multiplier controlling the displayed glyph size in the quiver plots
+    quiver_opacity : float, default : 1.0
+        Opacity of the quiver glyphs
+    quiver_line_width : float, default : 2.0
+        Line width used for the quiver glyph outlines
+    quiver_mode : str, default : arrow
+        Glyph mode used by mayavi for the quiver plots
+    quiver_scale_mode : str, default : none
+        Scaling strategy for quiver glyphs, for example vector, scalar, or none
     view_settings : dict or None, default : None
         Set the view of the figure if not None
     animate : bool, default : False
@@ -421,15 +501,17 @@ def mlab_plot_prediction(
         Save the snapshots of the animation
     '''
     if mayavi_available:
+        quiver_scale_mode = _normalize_quiver_scale_mode(quiver_scale_mode)
         prediction_np = prediction.cpu().squeeze().permute(0, 3, 2, 1).numpy()
         terrain_shape = terrain.squeeze().shape
 
         # quiver slice plot
         if white_background:
-            fig = mlab.figure(fgcolor=(0., 0., 0.), bgcolor=(1, 1, 1))
+            fig = mlab.figure(fgcolor=(0., 0., 0.), bgcolor=(1, 1, 1), size=(1400, 1000))
         else:
-            fig = mlab.figure()
+            fig = mlab.figure(size=(1400, 1000))
 
+        _configure_figure_rendering(fig)
         mlab_plot_terrain(terrain, terrain_mode, terrain_uniform_color)
         src = mlab.pipeline.vector_field(
             prediction_np[0], prediction_np[1], prediction_np[2]
@@ -443,32 +525,42 @@ def mlab_plot_prediction(
         ret = mlab.pipeline.vector_cut_plane(
             src,
             mask_points=2,
-            scale_factor=2.5,
+            scale_factor=quiver_scale_factor,
             resolution=50,
             view_controls=True,
-            mode='arrow',
+            mode=quiver_mode,
             colormap='viridis'
             )
+        ret.glyph.glyph.scale_mode = quiver_scale_mode
+        ret.actor.property.opacity = quiver_opacity
+        ret.actor.property.line_width = quiver_line_width
+        _configure_arrow_glyph(ret)
         ret.implicit_plane.normal = np.array([np.sqrt(0.5), np.sqrt(0.5), 0])
 
         mlab_set_view(view_settings, fig)
 
         # quiver plot
         if white_background:
-            fig = mlab.figure(fgcolor=(0., 0., 0.), bgcolor=(1, 1, 1))
+            fig = mlab.figure(fgcolor=(0., 0., 0.), bgcolor=(1, 1, 1), size=(1400, 1000))
         else:
-            fig = mlab.figure()
+            fig = mlab.figure(size=(1400, 1000))
 
+        _configure_figure_rendering(fig)
         mlab_plot_terrain(terrain, terrain_mode, terrain_uniform_color)
 
-        mlab.quiver3d(
+        quiver = mlab.quiver3d(
             prediction_np[0],
             prediction_np[1],
             prediction_np[2],
             mask_points=quiver_mask_points,
-            mode='arrow',
+            scale_factor=quiver_scale_factor,
+            mode=quiver_mode,
             colormap='viridis'
             )
+        quiver.glyph.glyph.scale_mode = quiver_scale_mode
+        quiver.actor.property.opacity = quiver_opacity
+        quiver.actor.property.line_width = quiver_line_width
+        _configure_arrow_glyph(quiver)
 
         mlab.outline(
             extent=[
@@ -563,12 +655,40 @@ def mlab_plot_error(
             else:
                 fig = mlab.figure()
             # take the norm across all channels
-            mlab_plot_terrain(terrain, terrain_mode, terrain_uniform_color)
+            terr = mlab_plot_terrain(terrain, terrain_mode, terrain_uniform_color)
+            if terr is not None:
+                _set_actor_opacity(terr, 0.25)
 
             error_norm = np.linalg.norm(error_np, axis=0)
             scalar = mlab.pipeline.scalar_field(error_norm)
             scalar.origin = [0, 0, 0]
-            vol = mlab.pipeline.volume(scalar, vmin=1.0)
+            positive_error = error_norm[error_norm > 0]
+
+            if positive_error.size > 0:
+                contour_levels = np.unique(
+                    np.percentile(positive_error, [90.0, 97.0, 99.5])
+                    )
+                contour_levels = contour_levels[np.isfinite(contour_levels)]
+            else:
+                contour_levels = np.array([])
+
+            if contour_levels.size == 0:
+                contour_levels = np.array([0.0])
+
+            iso = mlab.pipeline.iso_surface(
+                scalar,
+                contours=contour_levels.tolist(),
+                opacity=0.35,
+                colormap='viridis'
+                )
+
+            try:
+                iso.module_manager.scalar_lut_manager.use_default_range = False
+                iso.module_manager.scalar_lut_manager.data_range = [
+                    0.0, float(error_norm.max())
+                    ]
+            except Exception:
+                pass
 
             # change the colormap to viridis, currently the colorbar does not automatically update
             # lut_mngr = LUTManager(number_of_colors=256, lut_mode="viridis")
@@ -586,7 +706,9 @@ def mlab_plot_error(
                     ]
                 )
 
-            mlab.colorbar(vol, title='Prediction Error Norm [m/s]', label_fmt='%.1f')
+            mlab.colorbar(
+                iso, title='Prediction Error Norm [m/s]', label_fmt='%.2f'
+                )
 
             mlab_set_view(view_settings, fig)
 
@@ -1003,6 +1125,7 @@ def mlab_plot_streamlines(
 
             anim_streamlines()
 
+        if blocking:
             mlab.show()
 
 
