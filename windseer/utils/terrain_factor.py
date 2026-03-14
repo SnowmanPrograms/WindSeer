@@ -33,8 +33,8 @@ def compute_terrain_factor(samples, terrain):
             )
 
     # get amount of data that is not in the terrain for each sample
-    fluid_elements_in_samples = terrain.sign_().sum(-1).sum(-1).sum(-1
-                                                                    ) * samples.shape[1]
+    # NOTE: avoid in-place ops on `terrain` since it may be a view into the training input tensor.
+    fluid_elements_in_samples = terrain.sign().sum(-1).sum(-1).sum(-1) * samples.shape[1]
 
     # get total amount of data of 1 sample
     total_elements_in_samples = samples[0, :].numel()

@@ -282,6 +282,7 @@ def train_model(configs, output_dir, use_writer, copy_datasets):
             # forward + backward + optimize
             outputs = net(inputs)
             loss = loss_fn(outputs, labels, inputs, W)
+            train_avg_mean += mse_loss(outputs['pred'], labels).item()
 
             if 'logvar' in outputs.keys():
                 uncertainty_exp = outputs['logvar'].exp()
@@ -364,6 +365,7 @@ def train_model(configs, output_dir, use_writer, copy_datasets):
                     # mean of loss_fn is taken in case the loss is parallelized over multiple-gpus
                     loss = loss_fn(outputs, labels, inputs)
                     train_loss += loss.item()
+                    train_avg_mean += mse_loss(outputs['pred'], labels).item()
                     for k, v in train_loss_components.items():
                         train_loss_components[
                             k] += loss_fn.last_computed_loss_components[k]
@@ -410,6 +412,7 @@ def train_model(configs, output_dir, use_writer, copy_datasets):
                     outputs = net(inputs)
                     loss = loss_fn(outputs, labels, inputs)
                     validation_loss += loss.item()
+                    validation_avg_mean += mse_loss(outputs['pred'], labels).item()
                     for k, v in validation_loss_components.items():
                         validation_loss_components[
                             k] += loss_fn.last_computed_loss_components[k]

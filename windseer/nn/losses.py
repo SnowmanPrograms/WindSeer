@@ -171,7 +171,7 @@ class CombinedLoss(Module):
 
             predicted_scaled = {'pred': predicted['pred'] / channel_scaling}
             for key in predicted.keys():
-                if not key is 'pred':
+                if key != 'pred':
                     predicted_scaled[key] = predicted[key]
 
             return self.compute_loss(
