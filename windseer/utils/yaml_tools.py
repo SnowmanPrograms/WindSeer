@@ -104,6 +104,15 @@ class WindseerParams(object):
             'loss_weighting_fn': self.loss['loss_weighting_fn'],
             'loss_weighting_clamp': self.loss['loss_weighting_clamp']
             }
+        
+        if 'terrain_distance_alpha' in self.loss.keys():
+            kwargs['terrain_distance_alpha'] = self.loss['terrain_distance_alpha']
+
+        if 'terrain_distance_beta' in self.loss.keys():
+            kwargs['terrain_distance_beta'] = self.loss['terrain_distance_beta']
+
+        if 'terrain_distance_clamp_min' in self.loss.keys():
+            kwargs['terrain_distance_clamp_min'] = self.loss['terrain_distance_clamp_min']
 
         if 'verbose' in self.data.keys():
             kwargs['verbose'] = self.data['verbose']
