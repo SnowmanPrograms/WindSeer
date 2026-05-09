@@ -2,29 +2,29 @@
 run:
     plot_every_n_batches: 5
     n_epochs: 200
-    batchsize: 56
+    batchsize: 32
     num_workers: 8
 
     # StepLR is stepped once per epoch in windseer/nn/train_model.py
-    learning_rate_decay: 0.25
-    learning_rate_decay_step_size: 750
+    learning_rate_decay: 0.5
+    learning_rate_decay_step_size: 60
 
     compute_validation_loss: True
     compute_validation_loss_every_n_epochs: 10
     custom_init: False
     minibatch_epoch_loss: True
     evaluate_testset: False
-    warm_start: False
+    warm_start: True
 
     # options to store data
     save_model: True
     save_metadata: True
-    save_model_every_n_epoch: 25
+    save_model_every_n_epoch: 50
     save_params_hist_every_n_epoch: 100
 
     # optimizer settings
-    optimizer_type: 'adam'
-    optimizer_kwargs: {lr: 1.0E-4}
+    optimizer_type: 'radam'
+    optimizer_kwargs: {lr: 2.0E-5}
 
 # loss parameters
 loss:
@@ -32,7 +32,7 @@ loss:
     # ['LPLoss', 'ScaledLoss', 'VelocityGradientLoss','DivergenceFreeLoss', 'KLDivLoss', 'GaussianLogLikelihoodLoss'].
     #
     # Tip: DivergenceFreeLoss and VelocityGradientLoss are "physics" priors for incompressible flow fields.
-    loss_components: ['L2Loss', 'DivergenceFreeLoss', 'VelocityGradientLoss']
+    loss_components: ['L2Loss', 'VelocityGradientLoss']
 
     # If the homoscedastic uncertainty factors of the losses should be learnt during training.
     # With multiple loss components this can become unstable; keep disabled unless you explicitly want it.
@@ -50,7 +50,7 @@ loss:
     ScaledLoss_kwargs: {exclude_terrain: True, no_scaling: True, max_scale: 4, norm_threshold: 0.5, loss_factor_init: 0.0}
     # Down-weight physics terms by setting a positive factor (weight = exp(-q)).
     DivergenceFreeLoss_kwargs: {exclude_terrain: True, loss_type: 'L1', loss_factor_init: 3.0}
-    VelocityGradientLoss_kwargs: {exclude_terrain: True, loss_type: 'L1', loss_factor_init: 3.0}
+    VelocityGradientLoss_kwargs: {exclude_terrain: True, loss_type: 'L1', loss_factor_init: -2.0}
     GaussianLogLikelihoodLoss_kwargs: {exclude_terrain: True, uncertainty_loss_eps: 1e-8, loss_factor_init: 0.0}
     KLDivLoss_kwargs: {loss_factor_init: 0.0}
 
@@ -58,8 +58,14 @@ loss:
     log_loss_components: True
 
     # the weighting function of the loss
-    loss_weighting_fn: 0 # 0: off, 1: pressure fluct, 2: pressure grad, 3: vel grad
+    loss_weighting_fn: 4 # 0: off, 1: pressure fluct, 2: pressure grad, 3: vel grad, 4: terrain distance
     loss_weighting_clamp: True
+
+    # terrain distance weighting parameters (only used when loss_weighting_fn=4)
+    # W = 1 / (1 + terrain/alpha)^beta, terrain is the EDT distance in grid cells
+    terrain_distance_alpha: 3.0   # decay scale in grid cells (smaller = more focused near terrain)
+    terrain_distance_beta: 1.5    # decay rate (larger = sharper transition)
+    terrain_distance_clamp_min: 0.05  # minimum weight after clamping
 
     # If true the labels and predictions are channel-wise scaled by the average of the respective channel
     auto_channel_scaling: True
@@ -120,14 +126,14 @@ data:
 
 # model parameters
 model:
-    name_prefix: 'test_model'
+    name_prefix: 'test_model_expand_1'
     model_type: 'ModelEDNN3D'
     model_args: {
         n_x: 64,
         n_y: 64,
         n_z: 64,
         n_downsample_layers: 4,
-        n_first_conv_channels: 16,
+        n_first_conv_channels: 32,
         channel_multiplier: 2,
         filter_kernel_size: 3,
 
