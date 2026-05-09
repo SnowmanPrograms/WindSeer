@@ -33,6 +33,7 @@ class WeighingFunction(Enum):
     SQUARED_PRESSURE_FLUCTUATIONS = 1
     L2_PRESSURE_GRADIENTS = 2
     L2_VELOCITY_GRADIENTS = 3
+    TERRAIN_DISTANCE = 4
 
 
 class HDF5Dataset(Dataset):
@@ -215,6 +216,15 @@ class HDF5Dataset(Dataset):
         self._loss_weighting_clamp = parser.get_safe(
             'loss_weighting_clamp', True, bool, verbose
             )
+        self._terrain_distance_alpha = parser.get_safe(
+            'terrain_distance_alpha', 5.0, float, verbose
+            )
+        self._terrain_distance_beta = parser.get_safe(
+            'terrain_distance_beta', 1.0, float, verbose
+            )
+        self._terrain_distance_clamp_min = parser.get_safe(
+            'terrain_distance_clamp_min', 0.1, float, verbose
+            )
         self._additive_gaussian_noise = parser.get_safe(
             'additive_gaussian_noise', True, bool, verbose
             )
@@ -313,6 +323,8 @@ class HDF5Dataset(Dataset):
             weighting_channels = ['terrain', 'p']
         elif self._loss_weighting_fn == WeighingFunction.L2_VELOCITY_GRADIENTS:
             weighting_channels = ['terrain', 'ux', 'uy', 'uz']
+        elif self._loss_weighting_fn == WeighingFunction.TERRAIN_DISTANCE:
+            weighting_channels = ['terrain']
         else:
             weighting_channels = []
 
@@ -1369,6 +1381,7 @@ class HDF5Dataset(Dataset):
             1: squared pressure fluctuations
             2: l2 norm of the pressure gradient
             3: l2 norm of the velocity gradient
+            4: terrain distance weighting (higher weight near terrain surface)
 
         Parameters
         ----------
@@ -1405,7 +1418,7 @@ class HDF5Dataset(Dataset):
 
             if self._loss_weighting_clamp:
                 # TODO: make the clamping value a parameter that can be set from the YAML config file
-                W = W.clamp(0.0435)
+                W = W.clamp(max=0.0435)
 
             # normalize by its volume integral per sample
             W = W / (
@@ -1430,7 +1443,7 @@ class HDF5Dataset(Dataset):
 
             if self._loss_weighting_clamp:
                 # TODO: make the clamping value a parameter that can be set from the YAML config file
-                W = W.clamp(0.000814)
+                W = W.clamp(max=0.000814)
 
             # normalize by its volume integral per sample
             W = (
@@ -1452,16 +1465,31 @@ class HDF5Dataset(Dataset):
             terrain = data[self._channels_to_load.index('terrain')].unsqueeze(0)
 
             # compute the spatial gradient tensor of the velocity gradient and take the l2-norm of the gradient per sample and remove outliers
-            W = (windseer_utils.gradient(U, ds, terrain)**2).sum(1)**0.5
+            W = (windseer_utils.gradient(U, ds, terrain=None)**2).sum(1)**0.5
 
             if self._loss_weighting_clamp:
                 # TODO: make the clamping value a parameter that can be set from the YAML config file
-                W = W.clamp(0.00175)
+                W = W.clamp(max=0.05)
 
             # normalize by its volume integral per sample
             W = (
                 W / ((W).mean(-1).mean(-1).mean(-1).unsqueeze(-1).unsqueeze(-1)
                      .unsqueeze(-1).expand_as(W))
+                )
+            
+        # terrain distance weighting function
+        elif weighting_fn == WeighingFunction.TERRAIN_DISTANCE:
+
+            terrain = data[self._channels_to_load.index('terrain')].unsqueeze(0)
+
+            W = 1.0 / (1.0 + terrain / self._terrain_distance_alpha) ** self._terrain_distance_beta
+
+            if self._loss_weighting_clamp:
+                W = W.clamp(self._terrain_distance_clamp_min)
+
+            W = W / (
+                W.mean(-1).mean(-1).mean(-1).unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+                .expand_as(W)
                 )
 
         else:

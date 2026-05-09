@@ -336,6 +336,8 @@ def predict_and_visualize(
         mayavi=False,
         blocking=False,
         mayavi_configs={},
+        plottools_animation_output=None,
+        plottools_animation_fps=6,
         density_plot=False
     ):
     '''
@@ -369,6 +371,10 @@ def predict_and_visualize(
         Indicates if at the end the blocking plt.show() is called
     mayavi_configs : dict, default : empty dict
         Configuration parameter for the mayavi plots
+    plottools_animation_output : str or None, default : None
+        If set, export the plottools slice figures as GIFs by sweeping through all slices
+    plottools_animation_fps : int, default : 6
+        Frame rate used for the exported plottools GIFs
     '''
     input_channels = dataset.get_input_channels()
 
@@ -525,6 +531,8 @@ def predict_and_visualize(
                 input=input,
                 terrain=input[0].squeeze(),
                 ds=ds,
+                animation_output_path=plottools_animation_output,
+                animation_fps=plottools_animation_fps,
                 blocking=blocking
                 )
 

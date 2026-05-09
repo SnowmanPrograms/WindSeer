@@ -103,6 +103,18 @@ parser.add_argument(
 parser.add_argument(
     '--density', action='store_true', help='Show density plot'
     )
+parser.add_argument(
+    '--plottools_animation',
+    type=str,
+    default=None,
+    help='If set, export the plottools slice figures as GIFs to this output path or prefix'
+    )
+parser.add_argument(
+    '--plottools_animation_fps',
+    type=int,
+    default=6,
+    help='Frame rate used for exported plottools GIFs'
+    )
 args = parser.parse_args()
 
 if args.seed > 0:
@@ -223,5 +235,7 @@ nn.predict_and_visualize(
     mayavi=args.mayavi,
     blocking=True,
     mayavi_configs=mayavi_configs,
+    plottools_animation_output=args.plottools_animation,
+    plottools_animation_fps=args.plottools_animation_fps,
     density_plot=args.density
     )

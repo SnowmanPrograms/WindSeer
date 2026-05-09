@@ -421,17 +421,19 @@ def train_model(configs, output_dir, use_writer, copy_datasets):
                         uncertainty_exp = outputs['logvar'].exp()
                         validation_avg_uncertainty += uncertainty_exp.mean().item()
                         validation_max_uncertainty = max(
-                            train_max_uncertainty,
+                            validation_max_uncertainty,
                             uncertainty_exp.max().item()
                             )
                         validation_min_uncertainty = min(
-                            train_min_uncertainty,
+                            validation_min_uncertainty,
                             uncertainty_exp.min().item()
                             )
 
                 validation_loss /= len(loader_validationset)
                 for k, v in validation_loss_components.items():
                     validation_loss_components[k] /= len(loader_validationset)
+                validation_avg_mean /= len(loader_validationset)
+                validation_avg_uncertainty /= len(loader_validationset)
 
             if use_writer and not should_exit:
                 writer.add_scalar('Train/Loss', train_loss, epoch + 1)

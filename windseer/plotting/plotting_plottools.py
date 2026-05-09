@@ -1,7 +1,9 @@
 from windseer.utils import divergence
+import os
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.colors as colors
+from matplotlib import animation
 import numpy as np
 from matplotlib.widgets import Slider, RadioButtons
 import torch
@@ -36,6 +38,8 @@ class PlotUtils():
             cmap=cm.viridis,
             terrain_color='grey',
             invalid_color='white',
+            animation_output_path=None,
+            animation_fps=6,
             blocking=True
         ):
         '''
@@ -83,6 +87,10 @@ class PlotUtils():
             Color of the terrain
         invalid_color : str, default: white
             Color of invalid pixels (no measurements available for the sparse input)
+        animation_output_path : str or None, default: None
+            If set, export the slice plots as GIFs by sweeping over all slices in the default x-z view
+        animation_fps : int, default: 6
+            Frame rate used for the exported GIFs
         blocking : bool, default: True
             Indicates if the plot call is blocking by calling plt.show()
         '''
@@ -578,8 +586,75 @@ class PlotUtils():
 
         # the number of already open figures, used in slider and button callbacks
         self._n_already_open_figures = 0
+        self._figures = []
+        self._animation_output_path = animation_output_path
+        self._animation_fps = animation_fps
 
         self.blocking = blocking
+
+    def _build_animation_filename(self, figure_idx):
+        if self._animation_output_path is None:
+            return None
+
+        base, ext = os.path.splitext(self._animation_output_path)
+        if ext == '':
+            ext = '.gif'
+
+        if ext.lower() != '.gif':
+            raise ValueError('PlotUtils: only GIF output is supported for plottools animations')
+
+        if len(self._figures) == 1:
+            output_path = base + ext
+        else:
+            output_path = '{}_fig{:02d}{}'.format(base, figure_idx + 1, ext)
+
+        output_dir = os.path.dirname(output_path)
+        if output_dir != '':
+            os.makedirs(output_dir, exist_ok=True)
+
+        return output_path
+
+    def _set_slice_for_figure(self, figure_idx, slice_number):
+        fig = self._figures[figure_idx]
+        plt.figure(fig.number)
+        self._n_slices[figure_idx] = slice_number
+        self.update_images()
+
+    def _save_slice_animations(self):
+        if self._animation_output_path is None:
+            return
+
+        if len(self._figures) == 0:
+            return
+
+        n_slices = self._domain_shape[1]
+        interval = 1000.0 / float(max(self._animation_fps, 1))
+
+        for figure_idx, fig in enumerate(self._figures):
+            output_path = self._build_animation_filename(figure_idx)
+
+            def update(frame_idx, idx=figure_idx, current_fig=fig):
+                self._set_slice_for_figure(idx, frame_idx)
+                return current_fig.axes
+
+            anim = animation.FuncAnimation(
+                fig,
+                update,
+                frames=range(n_slices),
+                interval=interval,
+                blit=False,
+                repeat=True
+                )
+
+            try:
+                writer = animation.PillowWriter(fps=max(self._animation_fps, 1))
+            except Exception as e:
+                raise RuntimeError(
+                    'PlotUtils: exporting GIF animations requires Pillow support in matplotlib'
+                    ) from e
+
+            anim.save(output_path, writer=writer)
+            print('Saved plottools animation to {}'.format(output_path))
 
     def update_images(self):
         '''
@@ -658,6 +733,7 @@ class PlotUtils():
                 n_rows, n_columns, squeeze=False, figsize=(14.5, 12)
                 )
             fig_in.patch.set_facecolor('white')
+            self._figures.append(fig_in)
             fig_idx += 1
             slice = self._n_slices[fig_idx]
 
@@ -747,6 +823,7 @@ class PlotUtils():
                     n_rows, n_columns, squeeze=False, figsize=(14.5, 12)
                     )
                 fig_in.patch.set_facecolor('white')
+                self._figures.append(fig_in)
                 fig_idx += 1
                 slice = self._n_slices[fig_idx]
 
@@ -1015,6 +1092,7 @@ class PlotUtils():
         if self._plot_error_norm:
             fig_in, ah_in = plt.subplots(1, 1, squeeze=False, figsize=(8, 8))
             fig_in.patch.set_facecolor('white')
+            self._figures.append(fig_in)
             fig_idx += 1
             slice = self._n_slices[fig_idx]
 
@@ -1071,6 +1149,8 @@ class PlotUtils():
             for circle in self._buttons[fig_idx].circles:
                 circle.set_radius(0.1)
             self._buttons[fig_idx].on_clicked(self.radio_callback)
+
+        self._save_slice_animations()
 
         if self.blocking:
             plt.show()
@@ -1145,6 +1225,8 @@ def plot_prediction(
         measurements_mask=None,
         ds=None,
         title_dict=None,
+        animation_output_path=None,
+        animation_fps=6,
         blocking=True
     ):
     '''
@@ -1176,6 +1258,10 @@ def plot_prediction(
         Cell size of the data grid, used for plotting the divergence field, if set and the data is available the divergency is computed and plotted
     title_dict :  dict or None, default: None
         An optional title dict can be passed, if one would like to replace the default titles or plot new channels
+    animation_output_path : str or None, default: None
+        If set, export the slice plots as GIFs by sweeping over all slices in the default x-z view
+    animation_fps : int, default: 6
+        Frame rate used for the exported GIFs
     blocking : bool, default: True
         Indicates if the plot call is blocking by calling plt.show()
     '''
@@ -1199,6 +1285,8 @@ def plot_prediction(
         terrain=terrain,
         ds=ds,
         title_dict=title_dict,
+        animation_output_path=animation_output_path,
+        animation_fps=animation_fps,
         blocking=blocking
         )
     instance.plot()

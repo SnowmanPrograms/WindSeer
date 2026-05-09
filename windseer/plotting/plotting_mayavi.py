@@ -80,6 +80,73 @@ def _set_actor_opacity(plot, opacity):
         pass
 
 
+def _plot_scalar_point_cloud(
+        scalar_data,
+        terrain,
+        title,
+        figure=None,
+        scale_factor=0.6,
+        max_points=50000
+    ):
+    terrain_np = terrain.cpu().squeeze().permute(2, 1, 0).numpy()
+    valid_mask = np.logical_and.reduce((
+        terrain_np > 0,
+        np.isfinite(scalar_data),
+        scalar_data > 0
+        ))
+
+    if not np.any(valid_mask):
+        return None
+
+    if figure is not None:
+        _configure_figure_rendering(figure)
+
+    x, y, z = np.where(valid_mask)
+    scalars = scalar_data[valid_mask]
+
+    if x.size > max_points:
+        step = int(np.ceil(float(x.size) / float(max_points)))
+        x = x[::step]
+        y = y[::step]
+        z = z[::step]
+        scalars = scalars[::step]
+
+    points = mlab.points3d(
+        x,
+        y,
+        z,
+        scalars,
+        mode='sphere',
+        scale_mode='scalar',
+        scale_factor=scale_factor,
+        figure=figure,
+        colormap='viridis'
+        )
+
+    try:
+        points.glyph.glyph.scale_factor = scale_factor
+    except Exception:
+        pass
+
+    try:
+        points.glyph.glyph_source.glyph_source.theta_resolution = 10
+        points.glyph.glyph_source.glyph_source.phi_resolution = 10
+    except Exception:
+        pass
+
+    try:
+        points.module_manager.scalar_lut_manager.use_default_range = False
+        points.module_manager.scalar_lut_manager.data_range = [
+            0.0, float(np.nanmax(scalar_data))
+            ]
+    except Exception:
+        pass
+
+    mlab.colorbar(points, title=title, label_fmt='%.2f')
+
+    return points
+
+
 def mlab_plot_terrain(terrain, mode='blocks', uniform_color=False, figure=None):
     '''
     Plot the terrain into the current or a new figure
@@ -657,7 +724,7 @@ def mlab_plot_error(
             # take the norm across all channels
             terr = mlab_plot_terrain(terrain, terrain_mode, terrain_uniform_color)
             if terr is not None:
-                _set_actor_opacity(terr, 0.25)
+                _set_actor_opacity(terr, 1.0)
 
             error_norm = np.linalg.norm(error_np, axis=0)
             scalar = mlab.pipeline.scalar_field(error_norm)
@@ -714,6 +781,36 @@ def mlab_plot_error(
 
             if animate:
                 mlab_animate_rotate(save_animation, figure=fig)
+
+            if white_background:
+                point_fig = mlab.figure(
+                    fgcolor=(0., 0., 0.), bgcolor=(1, 1, 1)
+                    )
+            else:
+                point_fig = mlab.figure()
+
+            terr = mlab_plot_terrain(
+                terrain, terrain_mode, terrain_uniform_color, figure=point_fig
+                )
+            if terr is not None:
+                _set_actor_opacity(terr, 1.0)
+
+            _plot_scalar_point_cloud(
+                error_norm,
+                terrain,
+                title='Prediction Error Norm Point Cloud [m/s]',
+                figure=point_fig
+                )
+
+            mlab.outline(
+                extent=[
+                    0, terrain_shape[2] - 1, 0, terrain_shape[1] -
+                    1, 0, terrain_shape[0] - 1
+                    ],
+                figure=point_fig
+                )
+
+            mlab_set_view(view_settings, point_fig)
 
         elif error_mode == error_modes[1]:
             # one figure per channel
